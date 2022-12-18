@@ -50,11 +50,10 @@ procinit(void)
   struct proc *p;
   
   initlock(&pid_lock, "nextpid");
-  initlock(&wait_lock, "wait_lock");
   for(p = proc; p < &proc[NPROC]; p++) {
       initlock(&p->lock, "proc");
-      p->state = UNUSED;
       p->kstack = KSTACK((int) (p - proc));
+      memset(p->vma, 0, sizeof(p->vma));
   }
 }
 
@@ -308,6 +307,13 @@ fork(void)
       np->ofile[i] = filedup(p->ofile[i]);
   np->cwd = idup(p->cwd);
 
+  for (int i = 0; i < 16; i++) {
+    if (p->vma[i].valid == 1) {
+      memmove(&(np->vma[i]), &(p->vma[i]), sizeof(struct VMA));
+      filedup(p->vma[i].f);
+    }
+  }
+  
   safestrcpy(np->name, p->name, sizeof(p->name));
 
   pid = np->pid;
@@ -351,6 +357,10 @@ exit(int status)
   if(p == initproc)
     panic("init exiting");
 
+  for (int i = 0; i < 16; i++) {
+    unmap_vma(p->vma[i].addr, p->vma[i].length);
+  }
+  
   // Close all open files.
   for(int fd = 0; fd < NOFILE; fd++){
     if(p->ofile[fd]){

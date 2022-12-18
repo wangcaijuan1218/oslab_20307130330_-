@@ -65,14 +65,23 @@ usertrap(void)
     intr_on();
 
     syscall();
-  } else if((which_dev = devintr()) != 0){
+  } else if (r_scause() == 15 || r_scause() == 13) {
+    if(r_stval() >= p->sz || r_stval() < p->trapframe->sp){
+      p->killed = 1;
+    } else {
+      int ret = handle_mmap_page_fault(r_scause(), r_stval());
+      if (ret < 0) {
+        p->killed = 1;
+      }
+    }
+  }else if((which_dev = devintr()) != 0){
     // ok
   } else {
+
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
-    setkilled(p);
+    p->killed = 1;
   }
-
   if(killed(p))
     exit(-1);
 

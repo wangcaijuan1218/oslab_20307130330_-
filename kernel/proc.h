@@ -1,4 +1,15 @@
 // Saved registers for kernel context switches.
+struct VMA { //增加关于VMA的定义
+  uint64 addr; 
+  uint64 length; 
+  int prot; 
+  int flags; 
+  int offset;
+  int valid; 
+  uint64 bitmap; 
+  struct file* f; 
+};
+
 struct context {
   uint64 ra;
   uint64 sp;
@@ -81,6 +92,8 @@ struct trapframe {
 
 enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
+
+
 // Per-process state
 struct proc {
   struct spinlock lock;
@@ -104,4 +117,5 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+  struct VMA vma[16];
 };
